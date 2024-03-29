@@ -1,0 +1,2 @@
+# Blueprints
+Home Assistant Blueprints
