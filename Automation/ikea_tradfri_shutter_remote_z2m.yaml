@@ -2,7 +2,7 @@ blueprint:
   domain: automation
   name: Ikea Tradfri Dimmer as Shutter Remote (Zigbee2MQTT)
   author: Misiu
-  source_url: https://github.com/Misiu/Blueprints/blob/main/Automations/ikea_tradfri_shutter_remote_z2m.yaml
+  source_url: https://github.com/Misiu/Blueprints/blob/main/Automation/ikea_tradfri_shutter_remote_z2m.yaml
   homeassistant:
     min_version: "2024.2.0"
   description: |
