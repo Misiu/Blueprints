@@ -1,0 +1,70 @@
+blueprint:
+  domain: automation
+  name: Ikea Tradfri Dimmer as Shutter Remote (Zigbee2MQTT)
+  author: Misiu
+  source_url: https://github.com/Misiu/Blueprints/blob/main/Automations/ikea_tradfri_shutter_remote_z2m.yaml
+  homeassistant:
+    min_version: "2024.2.0"
+  description: |
+    Control a shutter with an Ikea Tradfri Dimmer over Zigbee2MQTT
+
+    Press on I button to open the shutter, it the shutter is opening it will stop.
+    Press on 0 button to close the shutter, it the shutter is closing it will stop.
+  input:
+    remote:
+      name: Remote
+      description: IKEA Tradfri Dimmer remote to use
+      selector:
+        device:
+          integration: mqtt
+          manufacturer: IKEA
+          model: TRADFRI ON/OFF switch (E1743)
+    cover:
+      name: Shutter
+      description: The shutter to control
+      selector:
+        target:
+          entity:
+            domain: cover
+            
+trigger_variables:
+  input_remote: !input remote
+  input_cover: !input cover
+
+trigger:
+  - platform: device
+    domain: mqtt
+    device_id: !input remote
+    type: action
+    subtype: "on"
+    
+  - platform: device
+    domain: mqtt
+    device_id: !input remote
+    type: action
+    subtype: "off"
+    
+action:
+- choose:
+  - conditions:
+    - '{{ trigger.payload == "on" }}'
+    sequence:
+    - service: >
+        {% if is_state(input_cover.entity_id, 'opening') %}
+          cover.stop_cover
+        {% else %}
+          cover.open_cover
+        {% endif %}
+      target: !input cover
+  - conditions:
+    - '{{ trigger.payload == "off" }}'
+    sequence:
+    - service: >
+        {% if is_state(input_cover.entity_id, 'closing') %}
+          cover.stop_cover
+        {% else %}
+          cover.close_cover
+        {% endif %}
+      target: !input cover
+mode: restart
+    
