@@ -1,0 +1,318 @@
+blueprint:
+  name: Openpaper Link Epaper Waste Collection Display
+  description: Blueprint to set up a new Tag for Wastecollection. Openepaperlink Addon must be installed.
+  domain: automation
+  author: Misiu
+  input:
+    epaper_target:
+      name: Epaper
+      description: Select EPaper display
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: open_epaper_linkpoju
+            device_class: sensor
+            
+    bin1_target:
+      name: First bin
+      description: Top-left bin
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: calendar
+
+    bin2_target:
+      name: Second bin
+      description: Top-right bin
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: calendar
+
+    bin3_target:
+      name: Third bin
+      description: Bottom-left bin
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: calendar
+
+    bin4_target:
+      name: Fourth bin
+      description: Bottom-right bin
+      selector:
+        entity:
+          multiple: false
+          filter:
+            domain: calendar   
+            
+    settings:
+          name: Settings
+          icon: mdi:cog
+          collapsed : true
+          description: These options control a specific feature of this blueprint
+          input:
+            days_before:
+              name: Alert before X days
+              description: Show on red background X days before planed collection date
+              default: 1
+              selector:
+                number:
+                  min: 0
+                  max: 20
+                  mode: slider
+                  step: 1
+
+alias: Update Bins Tag
+description: ""
+
+trigger:
+  - platform: time_pattern
+    hours: /2
+    
+  - platform: homeassistant
+    event: start
+    
+condition: []
+variables:
+
+  days_before: !input days_before
+
+  bin1: !input bin1_target
+  bin1_name: "{{ state_attr(bin1, 'friendly_name') }}"
+  bin1_days: >
+    {% set start_time = state_attr(bin1, 'start_time') %}
+    {% if start_time %}
+      {{ ((start_time | as_datetime | as_local) - today_at()).days }}
+    {% else %}
+      None
+    {% endif %}
+  
+  bin2: !input bin2_target
+  bin2_name: "{{ state_attr(bin2, 'friendly_name') }}"
+  bin2_days: >
+    {% set start_time = state_attr(bin2, 'start_time') %}
+    {% if start_time %}
+      {{ ((start_time | as_datetime | as_local) - today_at()).days }}
+    {% else %}
+      None
+    {% endif %}
+  
+  bin3: !input bin3_target
+  bin3_name: "{{ state_attr(bin3, 'friendly_name') }}"
+  bin3_days: >
+    {% set start_time = state_attr(bin3, 'start_time') %}
+    {% if start_time %}
+      {{ ((start_time | as_datetime | as_local) - today_at()).days }}
+    {% else %}
+      None
+    {% endif %}
+
+  bin4: !input bin4_target
+  bin4_name: "{{ state_attr(bin4, 'friendly_name') }}"
+  bin4_days: >
+    {% set start_time = state_attr(bin4, 'start_time') %}
+    {% if start_time %}
+      {{ ((start_time | as_datetime | as_local) - today_at()).days }}
+    {% else %}
+      None
+    {% endif %}
+  
+action:
+  - service: open_epaper_link.drawcustom
+    target:
+      entity_id: !input epaper_target
+    data:
+      background: white
+      dry-run: false
+      rotate: 0
+      payload:
+    #krzyż
+        - type: line
+          fill: red
+          width: 3
+          x_start: 5
+          y_start: 64
+          x_end: 121
+          y_end: 64
+        - type: line
+          fill: red
+          width: 3
+          x_start: 175
+          y_start: 64
+          x_end: 291
+          y_end: 64
+        - type: line
+          fill: red
+          width: 3
+          x_start: 148
+          y_start: 5
+          x_end: 148
+          y_end: 37
+        - type: line
+          fill: red
+          width: 3
+          x_start: 148
+          y_start: 89
+          x_end: 148
+          y_end: 123
+                  
+        #top-left
+        - type: rectangle
+          outline: white
+          fill: "{{'white' if bin1_days is none or bin1_days > days_before else 'red' }}"
+          width: 1
+          x_start: 5
+          y_start: 5
+          x_end: 143
+          y_end: 59
+        - type: text
+          value: "{{bin1_name}}"
+          font: ppb.ttf
+          x: 70
+          "y": 21
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin1_days is none or bin1_days > days_before else 'white' }}"
+        - type: text
+          value: >
+            {% if bin1_days is none %}
+              --
+            {% elif bin1_days == 0 %}
+              Dziś
+            {% elif bin1_days == 1 %}
+              Jutro
+            {% else %}
+              za {{ bin1_days }} dni
+            {% endif %}
+          font: ppb.ttf
+          x: 70
+          "y": 43
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin1_days is none or bin1_days > days_before else 'white' }}"
+              
+        #top-right
+        - type: rectangle
+          outline: white
+          fill: "{{'white' if bin2_days is none or bin2_days > days_before else 'red' }}"
+          width: 1
+          x_start: 153
+          y_start: 5
+          x_end: 291
+          y_end: 59
+        - type: text
+          value: "{{bin2_name}}"
+          font: ppb.ttf
+          x: 226
+          "y": 21
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin2_days is none or bin2_days > days_before else 'white' }}"
+        - type: text
+          value: >
+            {% if bin2_days is none %}
+              --
+            {% elif bin2_days == 0 %}
+              Dziś
+            {% elif bin2_days == 1 %}
+              Jutro
+            {% else %}
+              za {{ bin2_days }} dni
+            {% endif %}
+          font: ppb.ttf
+          x: 226
+          "y": 43
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin2_days is none or bin2_days > days_before else 'white' }}"
+              
+        #bottom-left
+        - type: rectangle
+          outline: white
+          fill: "{{'white' if bin3_days is none or bin3_days > days_before else 'red' }}"
+          width: 1
+          x_start: 5
+          y_start: 69
+          x_end: 143
+          y_end: 123
+        - type: text
+          value: "{{bin3_name}}"
+          font: ppb.ttf
+          x: 70
+          "y": 85
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin3_days is none or bin3_days > days_before else 'white' }}"
+        - type: text
+          value: >
+            {% if bin3_days is none %}
+              --
+            {% elif bin3_days == 0 %}
+              Dziś
+            {% elif bin3_days == 1 %}
+              Jutro
+            {% else %}
+              za {{ bin3_days }} dni
+            {% endif %}
+          font: ppb.ttf
+          x: 70
+          "y": 107
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin3_days is none or bin3_days > days_before else 'white' }}"
+              
+        #bottom-right
+        - type: rectangle
+          outline: white
+          fill: "{{'white' if bin4_days is none or bin4_days > days_before else 'red' }}"
+          width: 1
+          x_start: 153
+          y_start: 69
+          x_end: 291
+          y_end: 123
+        - type: text
+          value: "{{bin4_name}}"
+          font: ppb.ttf
+          x: 226
+          "y": 85
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin4_days is none or bin4_days > days_before else 'white' }}"
+        - type: text
+          value: >
+            {% if bin4_days is none %}
+              --
+            {% elif bin4_days == 0 %}
+              Dziś
+            {% elif bin4_days == 1 %}
+              Jutro
+            {% else %}
+              za {{ bin4_days }} dni
+            {% endif %}
+          font: ppb.ttf
+          x: 226
+          "y": 107
+          size: 18
+          anchor: mm
+          color: "{{'black' if bin4_days is none or bin4_days > days_before else 'white' }}"
+              
+        #ikona
+        - type: icon
+          value: circle
+          x: 113
+          "y": 29
+          size: 70
+          color: white
+        - type: icon
+          value: trash-can
+          x: 123
+          "y": 39
+          size: 50
+          color: red
+
+mode: single
