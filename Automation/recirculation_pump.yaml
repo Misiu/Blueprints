@@ -1,0 +1,150 @@
+blueprint:
+  domain: automation
+  name: Recirculation Pump Temperature Control
+  source_url: https://github.com/Misiu/Blueprints/blob/main/Automation/recirculation_pump.yaml
+  author: Misiu
+  homeassistant:
+    min_version: 2025.5.0
+  description: |
+    Controls a recirculation pump based on current temperature, time window, and maximum run duration.
+
+    **How it works:**
+    - **Turn ON** the pump when:
+      1. Current temperature falls **below** the lower threshold,  
+      2. Current time is **between** the configured start and end time.  
+    - **Turn OFF** the pump when:
+      - Current temperature rises **above** the upper threshold,  
+      - **OR** the pump has been ON longer than the maximum run duration (regardless of time of day).  
+
+    **Additional triggers:**
+    - Home Assistant start  
+    - Automation reload  
+
+    This ensures that if the pump was running just before the end of the active window, 
+    it will still be turned off when the off conditions are met after restart.
+  
+  input:
+  
+    temp_sensor:
+      name: Temperature sensor
+      description: The sensor entity providing the current temperature for recirculation.
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+          
+    circulation_switch:
+      name: Circulation pump switch
+      description: The switch entity that turns the recirculation pump ON or OFF.
+      selector:
+        entity:
+          domain: switch
+          
+    start_time:
+      name: Active start time
+      description: Time of day after which temperature-based control is allowed to turn the pump ON.
+      default: "06:00:00"
+      selector:
+        time: {}
+
+    end_time:
+      name: Active end time
+      description: Time of day after which temperature-based control will not turn the pump ON.
+      default: "22:00:00"
+      selector:
+        time: {}
+
+    start_temp:
+      name: Lower temperaturet threshold (°C)
+      description: Pump turns ON when temperature is below this value (within active time window).
+      default: 28.0
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          step: 0.1
+          unit_of_measurement: °C
+
+    stop_temp:
+      name: Upper temperature threshold (°C)
+      description: Pump turns OFF when temperature rises above this value.
+      default: 35.0
+      selector:
+        number:
+          min: 0.0
+          max: 100.0
+          step: 0.1
+          unit_of_measurement: °C
+
+    run_duration:
+      name: Maximum run duration
+      description: Maximum continuous time the pump can stay ON before it is forced OFF.
+      default: "00:08:00"
+      selector:
+        duration: {}
+        
+trigger_variables:
+  input_temp_sensor: !input temp_sensor
+  input_circulation_switch: !input circulation_switch
+  input_start_time: !input start_time
+  input_end_time: !input end_time
+  input_start_temp: !input start_temp
+  input_stop_temp: !input stop_temp
+  input_run_duration: !input run_duration
+
+trigger:
+  - platform: state
+    entity_id: !input temp_sensor
+    
+  - platform: numeric_state
+    entity_id: !input temp_sensor
+    above: !input stop_temp
+    
+  - platform: state
+    entity_id: !input circulation_switch
+    to: "on"
+    for: !input run_duration
+    
+  - platform: time
+    at: !input start_time
+    
+  - platform: homeassistant
+    event: start
+    
+  - platform: event
+    event_type: automation_reloaded
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {% set curr = (states(input_temp_sensor) | float(0)) %}
+              {% set now_t = now().strftime('%H:%M:%S') %}
+              {{ (curr < input_start_temp)
+                 and (not is_state(input_circulation_switch, 'on'))
+                 and (now_t >= input_start_time)
+                 and (now_t < input_end_time) }}
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input circulation_switch
+
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: numeric_state
+                entity_id: !input temp_sensor
+                above: !input stop_temp
+              - condition: state
+                entity_id: !input circulation_switch
+                state: "on"
+                for: !input run_duration
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input circulation_switch
+
+mode: single
